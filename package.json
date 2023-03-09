@@ -1,12 +1,13 @@
 {
   "name": "gatsby-source-gcs-image",
   "description": "GatsbyJS plugin to source images from Google Cloud Storage",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Parker Holladay <parker.holladay@gmail.com>",
   "dependencies": {
+    "@google-cloud/storage": "6.9.4",
+    "gatsby-source-filesystem": "5.7.0"
   },
   "devDependencies": {
-    "@google-cloud/storage": "6.9.4",
     "@types/chai": "4.3.4",
     "@types/eslint": "8.21.1",
     "@types/mocha": "10.0.1",
@@ -21,8 +22,6 @@
     "eslint": "8.35.0",
     "eslint-plugin-node": "11.1.0",
     "gatsby": "5.7.0",
-    "gatsby-source-filesystem": "5.7.0",
-    "gts": "3.1.1",
     "husky": "8.0.3",
     "mocha": "10.2.0",
     "rimraf": "4.4.0",
