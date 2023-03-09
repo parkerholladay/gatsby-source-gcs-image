@@ -1,0 +1,11 @@
+{
+  "all": true,
+  "branches": 95,
+  "check-coverage": true,
+  "exclude": ["**/__specs__", "src/gatsby-node.ts", "src/index.ts"],
+  "functions": 100,
+  "include": ["src/**/*.ts"],
+  "lines": 95,
+  "reporter": ["text", "html"],
+  "statements": 95
+}

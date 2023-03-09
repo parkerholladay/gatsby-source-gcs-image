@@ -1,0 +1,41 @@
+name: Build
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - package.json
+      - README.md
+      - '.dependabot/**'
+      - .gitignore
+      - .npmignore
+      - .npmrc
+      - .nvmrc
+      - .nycrc
+  pull_request:
+    branches:
+      - master
+    paths-ignore:
+      - package.json
+      - README.md
+      - '.dependabot/**'
+      - .gitignore
+      - .npmignore
+      - .npmrc
+      - .nvmrc
+      - .nycrc
+jobs:
+  build:
+    name: Build gatsby-source-gcs-image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - name: Install node modules
+        run: yarn
+      - name: Lint
+        run: npm run lint
+      - name: Test
+        run: npm run test:ci

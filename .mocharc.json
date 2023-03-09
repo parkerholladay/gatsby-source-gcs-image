@@ -1,0 +1,6 @@
+{
+  "reporter": "nyan",
+  "require": ["ts-node/register", "./test/setup.ts"],
+  "spec": "src/**/__specs__/*.spec.ts",
+  "watchFiles": ["src/**/*.ts", "test/**/*.ts"]
+}

@@ -1,0 +1,6 @@
+{
+  "bucket_name": "my-bucket",
+  "client_email": "foo@bar.com",
+  "private_key": "---key-foo-bar---",
+  "project_id": "my-project"
+}

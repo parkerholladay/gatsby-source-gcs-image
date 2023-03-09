@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" focusable="false">
+  <g data-name="gatsby-js">
+    <circle cx="14" cy="14" r="14" fill="#663399" />
+    <path fill="#ffffff"
+      d="M6.2 21.8C4.1 19.7 3 16.9 3 14.2L13.9 25c-2.8-.1-5.6-1.1-7.7-3.2zm10.2 2.9L3.3 11.6C4.4 6.7 8.8 3 14 3c3.7 0 6.9 1.8 8.9 4.5l-1.5 1.3C19.7 6.5 17 5 14 5c-3.9 0-7.2 2.5-8.5 6L17 22.5c2.9-1 5.1-3.5 5.8-6.5H18v-2h7c0 5.2-3.7 9.6-8.6 10.7z" />
+  </g>
+  <g data-name="google-cloud-storage">
+    <rect fill="#aecbfa" x="0" y="17" width="13" height="5" />
+    <rect fill="#669df6" x="0" y="17" width="2" height="5" />
+    <rect fill="#ffffff" x="3" y="19.1" width="4" height="1" />
+    <rect fill="#ffffff" x="8" y="18.5" width="2" height="2" rx="1" />
+    <rect fill="#669df6" x="11" y="17" width="2" height="5" />
+    <polygon fill="#4284f4" points="15 17 11 17 11 22 13 17" />
+
+    <rect fill="#aecbfa" x="0" y="23" width="13" height="5" />
+    <rect fill="#669df6" x="0" y="23" width="2" height="5" />
+    <rect fill="#ffffff" x="3" y="25.1" width="4" height="1" />
+    <rect fill="#ffffff" x="8" y="24.5" width="2" height="2" rx="1" />
+    <rect fill="#669df6" x="11" y="23" width="2" height="5" />
+    <polygon fill="#4284f4" points="13 23 11 23 11 28 13 23" />
+  </g>
+</svg>
