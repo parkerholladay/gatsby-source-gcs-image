@@ -1,9 +1,14 @@
 import { expect } from 'chai'
+import { generateNode } from '../../test/mock-node'
 import { sandbox } from '../../test/sandbox'
 import * as credentials from '../creds'
 import * as subject from '../utils'
 
 describe('utils', () => {
+  beforeEach(() => {
+    sandbox.stub(Date, 'now').callsFake(() => 0)
+  })
+
   describe('#parseGcsImageOptions', () => {
     let options: subject.GcsImageOptions
     let creds: credentials.Credentials | null
@@ -27,7 +32,6 @@ describe('utils', () => {
       }
 
       sandbox.stub(credentials, 'parseCredentials').callsFake(() => creds)
-      sandbox.stub(Date, 'now').callsFake(() => 0)
     })
 
     it('gets args from plugin options', () => {
@@ -35,7 +39,7 @@ describe('utils', () => {
       const expected = {
         bucketName: 'my-bucket',
         bucketPath: 'foo/bar',
-        expires: 120 * 1000,
+        expiresAt: 120 * 1000,
         credentials: creds?.gcp,
         projectId: 'my-project',
       }
@@ -56,7 +60,7 @@ describe('utils', () => {
         const expected = {
           bucketName: creds?.bucketName,
           bucketPath: undefined,
-          expires: 120 * 1000,
+          expiresAt: 120 * 1000,
           credentials: creds?.gcp,
           projectId: creds?.projectId,
         }
@@ -77,7 +81,7 @@ describe('utils', () => {
         const expected = {
           bucketName: creds?.bucketName,
           bucketPath: undefined,
-          expires: 900 * 1000,
+          expiresAt: 900 * 1000,
           credentials: creds?.gcp,
           projectId: creds?.projectId,
         }
@@ -96,6 +100,7 @@ describe('utils', () => {
 
       it('throws error', () => {
         const expected = 'Must provide either credsJson or pathToCreds for gcs images'
+
         expect(() => subject.parseGcsImageOptions(options)).to.throw(Error, expected)
       })
     })
@@ -115,6 +120,7 @@ describe('utils', () => {
 
       it('throws error', () => {
         const expected = 'Must provide projectId and bucketName for gcs images'
+
         expect(() => subject.parseGcsImageOptions(options)).to.throw(Error, expected)
       })
     })
@@ -126,6 +132,7 @@ describe('utils', () => {
 
       it('throws error', () => {
         const expected = 'Unable to get creds for gcs images'
+
         expect(() => subject.parseGcsImageOptions(options)).to.throw(Error, expected)
       })
     })
@@ -166,6 +173,72 @@ describe('utils', () => {
     })
   })
 
+  describe('#getImageNodesById', () => {
+    const nodes = [
+      generateNode(),
+      generateNode({
+        gcsId: 'foo',
+        internal: { type: subject.GCS_IMAGE_NODE_TYPE },
+      }),
+      generateNode(),
+      generateNode({
+        gcsId: 'bar',
+        internal: { type: subject.GCS_IMAGE_NODE_TYPE },
+      }),
+    ]
+    const expected = {
+      [(nodes[1] as unknown as subject.GcsImageNode).gcsId]: nodes[1],
+      [(nodes[3] as unknown as subject.GcsImageNode).gcsId]: nodes[3],
+    }
+
+    it('returns dictionary of gcs image nodes', () => {
+      const actual = subject.getImageNodesById(nodes)
+
+      expect(actual).to.eql(expected)
+    })
+  })
+
+  describe('#isCacheValid', () => {
+    const lastUpdated = new Date(Date.now()).toISOString()
+
+    it('returns true for future expiration', () => {
+      const node = generateNode({
+        expiresAt: 60 * 60 * 1000,
+        updatedAt: lastUpdated,
+      }) as unknown as subject.GcsImageNode
+
+      expect(subject.isCacheValid(node, lastUpdated)).to.be.true
+    })
+
+    describe('when cached node does not exist', () => {
+      it('returns false', () => {
+        expect(subject.isCacheValid(undefined, lastUpdated)).to.be.false
+      })
+    })
+
+    describe('when expiration is less than 10 minutes in the future', () => {
+      it('returns false', () => {
+        const node = generateNode({
+          expiresAt: (10 * 60 * 1000) - 1,
+          updatedAt: lastUpdated,
+        }) as unknown as subject.GcsImageNode
+
+        expect(subject.isCacheValid(node, lastUpdated)).to.be.false
+      })
+    })
+
+    describe('when file has been updated since cached', () => {
+      it('returns false', () => {
+        const node = generateNode({
+          expiresAt: 60 * 60 * 1000,
+          updatedAt: new Date(60 * 60 * 1000).toISOString(),
+        }) as unknown as subject.GcsImageNode
+
+        expect(subject.isCacheValid(node, lastUpdated)).to.be.false
+      })
+    })
+  })
+
   describe('#getFileParts', () => {
     it('returns name and extension from path', () => {
       expect(subject.getFileParts('foo/bar.png')).to.eql({ ext: '.png', name: 'bar' })
@@ -182,12 +255,14 @@ describe('utils', () => {
 
   describe('#createGcsImageNode', () => {
     const absolutePath = 'foo/bar.jpg'
-    const contentType = 'image/jpeg'
-    const gcsId = 'foo-bar'
+    const mediaType = 'image/jpeg'
+    const expires = 1000
     const etag = '---foobar---'
     const fileNode = { absolutePath: 'foo/bar.jpg', id: 'foo' }
+    const gcsId = 'foo-bar'
+    const updatedAt = new Date(Date.now()).toISOString()
     const image = {
-      metadata: { contentType, etag, id: gcsId },
+      metadata: { contentType: mediaType, etag, id: gcsId, updated: updatedAt },
     }
     const name = 'bar'
     const url = 'https://foo/bar.jpg'
@@ -196,6 +271,7 @@ describe('utils', () => {
     it('returns gcs image node shape', () => {
       const actual = subject.createGcsImageNode({
         createNodeId,
+        expiresAt: expires,
         fileNode,
         image,
         name,
@@ -203,16 +279,18 @@ describe('utils', () => {
       })
       const expected = {
         absolutePath,
+        expiresAt: expires,
         gcsId,
         id: '***foobar***',
         internal: {
           content: url,
           contentDigest: etag,
-          mediaType: contentType,
+          mediaType,
           type: subject.GCS_IMAGE_NODE_TYPE,
         },
         name,
         parent: fileNode.id,
+        updatedAt,
       }
 
       expect(actual).to.eql(expected)

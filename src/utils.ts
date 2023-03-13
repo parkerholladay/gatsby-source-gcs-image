@@ -1,5 +1,5 @@
 import { File } from '@google-cloud/storage'
-import { NodeInput as GatsbyNodeInput } from 'gatsby'
+import { Node as GatsbyNode, NodeInput as GatsbyNodeInput } from 'gatsby'
 import { FileSystemNode } from 'gatsby-source-filesystem'
 import path from 'path'
 import { GcpCredentials, parseCredentials } from './creds'
@@ -19,7 +19,7 @@ export type GcsImageArgs = {
   bucketName: string
   bucketPath?: string
   credentials: GcpCredentials
-  expires: number
+  expiresAt: number
   projectId: string
 }
 export function parseGcsImageOptions(options: GcsImageOptions): GcsImageArgs {
@@ -27,7 +27,7 @@ export function parseGcsImageOptions(options: GcsImageOptions): GcsImageArgs {
     bucketName: bucketNameOpt,
     bucketPath,
     credsJson,
-    expires: expiresOpt = 900, // 15 minutes
+    expires = 900, // 15 minutes
     pathToCreds,
     projectId: projectIdOpt,
   } = options
@@ -43,7 +43,7 @@ export function parseGcsImageOptions(options: GcsImageOptions): GcsImageArgs {
 
   const projectId = projectIdOpt ?? creds.projectId
   const bucketName = bucketNameOpt ?? creds.bucketName
-  const expires = Date.now() + expiresOpt * 1000
+  const expiresAt = Date.now() + expires * 1000
   if (!projectId || !bucketName) {
     throw new Error('Must provide projectId and bucketName for gcs images')
   }
@@ -52,13 +52,31 @@ export function parseGcsImageOptions(options: GcsImageOptions): GcsImageArgs {
     bucketName,
     bucketPath,
     credentials: creds.gcp,
-    expires,
+    expiresAt,
     projectId,
   }
 }
 
 export function isImage(fileName: string): boolean {
   return !!fileName && IMAGE_EXTENSIONS.test(fileName)
+}
+
+export function isCacheValid(node: GcsImageNode | undefined, lastUpdated: string): boolean {
+  return !!node
+    && node.expiresAt > Date.now() + 10 * 60 * 1000 // greater than 10 minutes from now
+    && node.updatedAt >= lastUpdated // file has not been updated in gcs
+}
+
+type GcsImageNodesById = { [id: string]: GcsImageNode }
+export function getImageNodesById(nodes: GatsbyNode[]): GcsImageNodesById {
+  return nodes.reduce<GcsImageNodesById>((images, node) => {
+    const image = node as unknown as GcsImageNode
+    if (image.internal.type === GCS_IMAGE_NODE_TYPE && !!image.gcsId) {
+      images[image.gcsId] = image
+    }
+
+    return images
+  }, {})
 }
 
 type FileParts = {
@@ -72,6 +90,7 @@ export function getFileParts(fileName: string): FileParts {
 
 type CreateGcsImageNodeParams = {
   createNodeId: (hash: string) => string
+  expiresAt: number
   fileNode: Pick<FileSystemNode, 'absolutePath' | 'id'>
   image: Pick<File, 'metadata'>
   name: string
@@ -79,14 +98,17 @@ type CreateGcsImageNodeParams = {
 }
 export type GcsImageNode = GatsbyNodeInput & {
   absolutePath: string
+  expiresAt: number
   gcsId: string
   name: string
+  updatedAt: string
 }
 export function createGcsImageNode(params: CreateGcsImageNodeParams): GcsImageNode {
-  const { createNodeId, fileNode, image, name, url } = params
+  const { createNodeId, expiresAt, fileNode, image, name, url } = params
 
   return {
     absolutePath: fileNode.absolutePath,
+    expiresAt,
     gcsId: image.metadata.id,
     id: createNodeId(image.metadata.etag),
     internal: {
@@ -97,5 +119,6 @@ export function createGcsImageNode(params: CreateGcsImageNodeParams): GcsImageNo
     },
     name,
     parent: fileNode.id,
+    updatedAt: image.metadata.updated ?? new Date().toISOString(),
   }
 }
